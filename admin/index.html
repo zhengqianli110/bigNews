@@ -94,10 +94,13 @@
             // 2. 退出登陆
             $('.logout').click(function (e) {
                 e.preventDefault()
-                //2.1 删除token
-                localStorage.removeItem('token');
-                //2.2 跳转登录页
-                window.location.href = './login.html';
+                if (confirm('确定要退出吗？')) {
+                    //2.1 删除token
+                    localStorage.removeItem('token');
+                    //2.2 跳转登录页
+                    window.location.href = './login.html';
+                }
+
             });
         })
     </script>
