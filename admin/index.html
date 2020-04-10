@@ -20,7 +20,7 @@
         <a href="#" class="logo"><img src="images/logo02.png" alt="logo"></a>
         <div class="user_info">
             <img src="images/2.jpg" alt="person">
-            <span>欢迎&nbsp;&nbsp;李思思</span>
+            <span>欢迎&nbsp;&nbsp;<i style="font-style: normal;">默认名字</i></span>
             <b>管理员</b>
         </div>
         <!-- 左侧导航栏 -->
@@ -54,5 +54,51 @@
 
         </div>
     </div>
+
+    <script>
+        // 进入主页要发ajax请求拿到管理员信息
+        // 设置页面的 用户名和图片
+
+        // 但是你进来的话要有  管理员的身份证明 
+        // 登陆页面  验证 请求回来有一个  token 
+        // 这个token 就是身份的证明 房卡 钥匙 
+        // 所以 请求要有这个 token 
+        // 1. 那我们吧这个 保存在 localStorage 里面  浏览器的缓存
+        // 1.1 去登陆页面吧他保存在  localStorage里面
+        // 2. 在这拿到这个 localStorage 里面保存的这个 身份证明
+        // 2.1 怎么拿到呢  
+        // 在 原生 js 里面 发送请求 设置请求头  里面  xhr.setRequestHeader('Authorization',localStorage.getTtem('token'))
+        //   在jq 里面的话 怎么设置请求头呢   headers{键值对}
+        //  headers{'Authorization'：localStorage.getTtem('token')}
+
+        //  但是这里又有一个问题
+        // 因为我们每个要操作 去请求的页面都要有身份的验证  
+        //  每次请求都要写  这个身份  就会很烦 
+        // 所以我们 在jq 的js 里面 用一个方法  让每次执行  请求之前都去 执行这个  身份证明的代码
+        $(function () {
+            // 1. 进来渲染 个人信息
+            $.ajax({
+                type: 'get',
+                url: 'http://localhost:8080/api/v1/admin/user/info',
+                success: function (bcakData) {
+                    console.log(bcakData);
+                    $('.user_info i').text(bcakData.data.nickname)
+                    $('.user_info>img').attr('src', bcakData.data.userPic)
+                    $('.user_center_link>img').attr('src', bcakData.data.userPic)
+                }
+
+            })
+
+            // 2. 退出登陆
+            $('.logout').click(function (e) {
+                e.preventDefault()
+                //2.1 删除token
+                localStorage.removeItem('token');
+                //2.2 跳转登录页
+                window.location.href = './login.html';
+            });
+        })
+    </script>
 </body>
+
 </html>

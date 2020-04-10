@@ -90,6 +90,8 @@
               $('#myModal').modal()
               // bootstrap 上模态这里有这个方法
               $('#myModal').on('hidden.bs.modal', function (e) {
+                // 这里吧 这个 房卡 身份证明保存在 localStorage 里面
+                localStorage.setItem('token', backData.token)
                 window.location.href = './index.html'
               })
 
