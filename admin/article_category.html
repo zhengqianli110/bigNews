@@ -14,6 +14,7 @@
     <script src="./libs/bootstrap/js/bootstrap.min.js"></script>
     <!-- 引入模板引擎js文件 -->
     <script src="./libs/template-web.js"></script>
+
 </head>
 
 <body>
@@ -51,5 +52,174 @@
             </table>
         </div>
     </div>
+
+    <!-- 模态框 -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">New message</h4>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <!-- 隐藏域 存下当前 id -->
+                        <input type="hidden" value="" id="categoryId">
+                        <div class="form-group">
+                            <label for="recipient-name" class="control-label">分类名称:</label>
+                            <input type="text" class="form-control" id="recipient-name">
+                        </div>
+                        <div class="form-group">
+                            <label for="message-text" class="control-label">分类别名:</label>
+                            <input class="form-control" id="message-text"></input>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="btnAddorEdit">Send message</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="./libs/http.js"></script>
+
+    <!-- 模板 -->
+    <script id="allList" type="text/html">
+        {{each data}}
+        <tr>
+            <td>{{$value.name}}</td>
+            <td>{{$value.slug}}</td>
+            <td class="text-center">
+                <a href="javascript:void(0)" bjId='{{$value.id}}'   data-toggle="modal"  data-target="#myModal" class=" btn btn-info btn-xs">编辑</a>
+                <a href="javascript:void(0)" delId='{{$value.id}}'  class="btn btn-danger btn-xs btn-delete">删除</a>
+            </td>
+        </tr>
+        {{/each}}
+    </script>
+    <script>
+        // 入口函数
+        $(function () {
+            function getData() {
+                //   进来要发送ajax请求 获取我们所有的分类
+                // 展示在页面上
+                // 这里用模板模式
+                $.ajax({
+                    type: 'get',
+                    url: BigNew.category_list,
+                    success: function (backData) {
+                        if (backData.code == 200) {
+                            let tem = template('allList', backData)
+                            $('tbody').html(tem)
+                        }
+                    }
+                })
+            }
+
+            getData()
+
+            // 提交和编辑 点击之后都是 用的 框架的 模态框
+            $('#myModal').on('show.bs.modal', function (e) {
+                // e.relatedTarget是 出现 模态框时 触发他的元素 
+                // 拿到了相对应的这个元素
+                // console.log(e.relatedTarget);
+                // 判断  如果模态框e.relatedTarget获取到的跟 新添分类全等 就是点击的新添分类按钮
+                //  否则 就是点击的 编辑按钮
+                if (e.relatedTarget === $('#xinzengfenlei')[0]) {
+                    //添加分类按钮
+                    $('#myModalLabel').text('新增分类')
+                    $('#btnAddorEdit').text('新增').addClass('btn-primary').removeClass('btn-success')
+                    $('#recipient-name').val('')
+                    $('#message-text').val('')
+                } else {
+                    // 编辑按钮
+                    $('#myModalLabel').text('编辑分类')
+                    $('#btnAddorEdit').text('编辑').addClass('btn-success').removeClass('btn-primary')
+
+                    // 点击编辑按钮 获取当前点击的信息 显示在对应 input 里面
+                    // 编辑按钮的 父元素 是td  父元素的上一个 再上一个元素 
+                    $('#recipient-name').val($(e.relatedTarget).parent().prev().prev().text().trim())
+                    $('#message-text').val($(e.relatedTarget).parent().prev().text().trim())
+                    // 隐藏域  保存 电机的这个id
+                    $('#categoryId').val($(e.relatedTarget).attr('bjId'))
+                }
+            })
+            // 新添的按钮 编辑的按钮  是同一个 点击事件 去判断 是点击的哪一个
+            $('#btnAddorEdit').on('click', function () {
+                // 判断条件 也可以是 $('#btnAddorEdit').hasClass('btn-success')
+                if ($('#btnAddorEdit').text() == '新增') {
+                    // console.log('新添');
+                    let userlist = $('#recipient-name').val()
+                    let userlistname = $('#message-text').val()
+                    $.ajax({
+                        type: 'post',
+                        url: BigNew.category_add,
+                        data: {
+                            name: userlist,
+                            slug: userlistname
+                        },
+                        success: function (backData) {
+                            // 请求成功之后 提示成功 还要刷新 局部页面 关闭  模态框
+                            if (backData.code == 201) {
+                                alert('新添成功')
+                                getData();
+                                $('#myModal').modal('hide')
+                            }
+                        }
+                    })
+                } else {
+                    //    编辑  当点击这个按钮的时候 获取input 里面的 信息 发送ajax 请求去编辑
+                    // 成功之后 提示成功 刷新局部页面
+                    let changename = $('#recipient-name').val()
+                    let changeslug = $('#message-text').val()
+                    let changeId = $('#categoryId').val()
+                    $.ajax({
+                        type: 'post',
+                        url: BigNew.category_edit,
+                        data: {
+                            id: changeId,
+                            name: changename,
+                            slug: changeslug
+                        },
+                        success: function (backData) {
+                            if (backData.code == 200) {
+                                alert('编辑成功')
+                                getData();
+                                $('#myModal').modal('hide')
+                            }
+                        }
+                    })
+                }
+            })
+
+            // 删除按钮  点击事件
+            //  这个要事件委托 因为是未来元素
+            // 发送ajax请求  删除 数据
+            // 清楚这条数据
+            //  局部刷新页面 
+            $('tbody').on('click', '.btn-delete', function () {
+                if (confirm('您确定要删除吗？')) {
+                    let delId = $(this).attr('delId')
+                    // console.log(delId);
+                    $.ajax({
+                        type: 'post',
+                        url: BigNew.category_delete,
+                        data: { id: delId },
+                        success: function () {
+                            alert('删除成功')
+                            $(this).parent().parent().remove()
+                            getData();
+
+                        }
+                    })
+
+                }
+            })
+
+        })
+    </script>
 
 </html>
