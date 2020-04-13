@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="./css/iconfont.css">
     <link rel="stylesheet" href="./css/main.css">
     <script src="./libs/jquery-1.12.4.min.js"></script>
+    <script src="./libs/bootstrap/js/bootstrap.min.js"></script>
+    <!-- 分页的js -->
+    <script src="./libs/jquery.twbsPagination.js"></script>
     <!-- 引入模板引擎js文件 -->
     <script src="./libs/template-web.js"></script>
 </head>
@@ -69,9 +72,223 @@
                 </tbody>
             </table>
             <div class="row text-center">
+                <ul class="pagination" id="pagination"></ul>
+                <!-- 这里的p 在分页 做判断  请求没有数据的话 让p 显示 -->
+                <p>没有数据！</p>
             </div>
         </div>
     </div>
+
+    <!-- 模板  下拉 文章类别 -->
+    <script id="category-temp" type="text/html">
+    <option value="">所有分类</option>
+    {{each data}}
+    <option value="{{$value.id}}">{{$value.name}}</option>
+    {{/each}}
+    </script>
+    <script src="./libs/http.js"></script>
+
+    <!-- 模板 文章 -->
+    <script id="wenzhang-tem" type="text/html">
+    {{each data.data v}}
+    <tr>
+        <td>{{v.title}}</td>
+        <td>{{v.author}}</td>
+        <td>{{v.category}}</td>
+        <td class="text-center">{{v.date}}</td>
+        <td class="text-center">{{v.state}}</td>
+        <td class="text-center">
+            <a href="article_edit.html" class="btn btn-default btn-xs">编辑</a>
+            <a href="javascript:void(0);" data-id='{{v.id}}' class="btn btn-danger btn-xs delete">删除</a>
+        </td>
+    </tr>
+    {{/each}}
+    </script>
+
+    <!-- 1.文章列表页面 一进来 发送ajax 信息  -->
+    <!-- 拿到这个 文章类别管理里面的所有这个 类别 显示在这个  下拉列表里面 -->
+    <script>
+        // 入口函数
+        $(function () {
+            // 发送请求 拿到 这个文章类别
+            $.ajax({
+                type: 'get',
+                url: BigNew.category_list,
+                success: function (backData) {
+                    if (backData.code == 200) {
+                        // 模板引擎  核心方法
+                        let tem = template('category-temp', backData)
+                        // 添加到 下拉列表里面
+                        $('#selCategory').html(tem)
+                    }
+                }
+            })
+
+            //------------------------------------------------------------------------------
+
+            // 封装 一下这个 ajax请求  获取 文章内容 的函数
+            // 但是 请求之后  做了不同的事情 这里要 根据传参的不同  来判断  回调函数  
+            // 1. 进来就调用  之后要去 用  分页方法 
+            // 2. 分页方法里面调用  去展示不同 分类 不同的数据
+            // 3. 筛选按钮 哪里调用  获取数据展示
+            function getData(page, callback) {
+                $.ajax({
+                    type: 'get',
+                    url: BigNew.article_query,
+                    data: {
+                        // $('#selCategory').val() 拿到下拉表单 里面  value 值   28行
+                        type: $('#selCategory').val(),//选中的文章类别
+                        state: $('#selStatus').val(),//状态 草稿/已发布
+                        page: page,
+                        perpage: 3,
+                    },
+                    success: function (backData) {
+                        if (backData.code == 200) {
+                            // console.log(backData);
+                            let restem = template('wenzhang-tem', backData)
+                            $('tbody').html(restem)
+                            // 回调 
+                            // 成功之后去 执行 分页这块  没有数据的话我们 就不显示分页了
+                            // 这里在 ul 下面准备一个 p 里面放没有数据  
+                            //  做个判断 没有数据的话就让这个p 显示
+                            if (backData.data.data.length != 0 && callback != null) {
+                                $('#pagination').show().next('p').hide();
+                                callback(backData);
+                            } else if (backData.data.data.length == 0) {
+                                // 没数据 就p显示
+                                $('#pagination').hide().next('p').show();
+                            }
+                        }
+                    }
+                })
+            }
+
+            //1. 进来调用
+            getData(1, function (backData) {
+                // 2. 分页那块  
+                $('#pagination').twbsPagination({
+                    totalPages: backData.data.totalPage, //总页数 这里的页数 就要拿到 上面 请求回来的 那个页数
+                    visiblePages: 7, //最大的可见页数
+                    first: '首页',
+                    prev: '上一页',
+                    next: '下一页',
+                    last: '尾页',
+                    //2.页码点击的回调函数事件
+                    onPageClick: function (event, page) {
+                        // 2.分页这块的调用
+                        getData(page, null)
+                    }
+                });
+            });
+
+
+            // 3. 点击筛选 调用
+
+            $('#btnSearch').on('click', function (e) {
+                e.preventDefault()
+                getData(1, function (backData) {
+                    $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, 1);
+                })
+            })
+
+
+
+
+
+
+
+            //------------------------------------------------------------------------------
+            // 2. 一进来 要发送ajax 请求  去获取  文章  
+            //  用 模板引擎的  模式 添加在这个 tbody 里面 
+            // 展示在页面上
+            // $.ajax({
+            //     type: 'get',
+            //     url: BigNew.article_query,
+            //     data: {
+            //         // $('#selCategory').val() 拿到下拉表单 里面  value 值   28行
+            //         type: $('#selCategory').val(),//选中的文章类别，默认是所有分类
+            //         state: $('#selStatus').val(),//状态（草稿/已发布）默认是所有分类
+            //         page: 1,
+            //         perpage: 3,
+            //     },
+            //     success: function (backData) {
+            //         if (backData.code == 200) {
+            //             console.log(backData);
+            //             let restem = template('wenzhang-tem', backData)
+            //             $('tbody').html(restem)
+
+            //             // 分页 写在这里  这里能拿到 页数
+            //             $('#pagination').twbsPagination({
+            //                 totalPages: backData.data.totalPage, //总页数 这里的页数 就要拿到 上面 请求回来的 那个页数
+            //                 visiblePages: 7, //最大的可见页数
+            //                 first: '首页',
+            //                 prev: '上一页',
+            //                 next: '下一页',
+            //                 last: '尾页',
+            //                 //页码点击的回调函数事件
+            //                 onPageClick: function (event, page) {
+            //                     //console.log(event);
+            //                     //console.log(page); //是当前点击的页码数
+            //                     $.ajax({
+            //                         type: 'get',
+            //                         url: BigNew.article_query,
+            //                         data: {
+            //                             // $('#selCategory').val() 拿到下拉表单 里面  value 值   28行
+            //                             type: $('#selCategory').val(),//选中的文章类别
+            //                             state: $('#selStatus').val(),//状态 草稿/已发布
+            //                             page: page,
+            //                             perpage: 3,
+            //                         },
+            //                         success: function (backData) {
+            //                             if (backData.code == 200) {
+            //                                 console.log(backData);
+            //                                 let restem = template('wenzhang-tem', backData)
+            //                                 $('tbody').html(restem)
+            //                             }
+            //                         }
+            //                     })
+            //                 }
+            //             });
+            //         }
+            //     }
+            // })
+
+            // // 2.筛选按钮 的点击事件  他是一个表单的按钮 清除默认的 点击提交事件
+            // // 获取他前面的 下拉里面选择的 内容
+            // // 发送 ajax请求  用模板引擎 去显示数据  在tbody 里面去添加
+            // $('#btnSearch').on('click', function (e) {
+            //     e.preventDefault()
+            //     $.ajax({
+            //         type: 'get',
+            //         url: BigNew.article_query,
+            //         data: {
+            //             // $('#selCategory').val() 拿到下拉表单 里面  value 值   28行
+            //             type: $('#selCategory').val(),//选中的文章类别
+            //             state: $('#selStatus').val(),//状态 草稿/已发布
+            //             page: 1,
+            //             perpage: 3,
+            //         },
+            //         success: function (backData) {
+            //             if (backData.code == 200) {
+            //                 // console.log(backData);
+            //                 let restem = template('wenzhang-tem', backData)
+            //                 $('tbody').html(restem)
+
+            //                 // 点击筛选之后 页面的  分页总页数也要改变
+            //                 //根据总的页数重绘分页插件.
+            //                 //第一个参数是事件名字, 
+            //                 //第二个参数是改变后的总的页码
+            //                 //第三个参数是当前要显示的页码 
+            //                 $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, 1);
+            //             }
+            //         }
+            //     })
+
+            // })
+
+            //------------------------------------------------------------------------------
+        })
+    </script>
 </body>
 
 </html>
