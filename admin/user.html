@@ -128,10 +128,10 @@
                                 // 这里用封装的接口文档
                                 url: BigNew.user_info,
                                 success: function (bcakData) {
-                                    console.log(bcakData);
-                                    $('.user_info i').text(bcakData.data.nickname)
-                                    $('.user_info>img').attr('src', bcakData.data.userPic)
-                                    $('.user_center_link>img').attr('src', bcakData.data.userPic)
+                                    // console.log(bcakData);
+                                    parent.$('.user_info i').text(bcakData.data.nickname)
+                                    parent.$('.user_info>img').attr('src', bcakData.data.userPic)
+                                    parent.$('.user_center_link>img').attr('src', bcakData.data.userPic)
                                 }
 
                             })

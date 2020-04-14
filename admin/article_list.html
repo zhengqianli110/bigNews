@@ -72,6 +72,7 @@
                 </tbody>
             </table>
             <div class="row text-center">
+                <!-- 分页插件 的 html 结构 -->
                 <ul class="pagination" id="pagination"></ul>
                 <!-- 这里的p 在分页 做判断  请求没有数据的话 让p 显示 -->
                 <p>没有数据！</p>
@@ -144,7 +145,7 @@
                     },
                     success: function (backData) {
                         if (backData.code == 200) {
-                            // console.log(backData);
+                            console.log(backData);
                             let restem = template('wenzhang-tem', backData)
                             $('tbody').html(restem)
                             // 回调 
@@ -153,19 +154,28 @@
                             //  做个判断 没有数据的话就让这个p 显示
                             if (backData.data.data.length != 0 && callback != null) {
                                 $('#pagination').show().next('p').hide();
+                                // 回调函数
                                 callback(backData);
-                            } else if (backData.data.data.length == 0) {
+                            } else if (backData.data.data.length == 0 && currenPage == 1) {
+                                // 当前的 返回数据 长度是0  并且 当前在第一页 的页码是 也就是没有数据
                                 // 没数据 就p显示
                                 $('#pagination').hide().next('p').show();
+                            } else if (backData.data.totalPage == currenPage - 1 && backData.data.data.length == 0) {
+                                // 请求回来的这个页码  是 currenPage -1  并且  当前这一页没有数据了
+                                // 就让 currenPage -=1
+                                currenPage -= 1
+                                $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, currenPage);
                             }
                         }
                     }
                 })
             }
 
-            //1. 进来调用
+            var currenPage = 1 // 保存当前的 第几页
+
+            //1. 进来调用 吧所有内容显示在页面
             getData(1, function (backData) {
-                // 2. 分页那块  
+                // 2. 之后 分页那块  分页调用插件的方法   
                 $('#pagination').twbsPagination({
                     totalPages: backData.data.totalPage, //总页数 这里的页数 就要拿到 上面 请求回来的 那个页数
                     visiblePages: 7, //最大的可见页数
@@ -173,28 +183,55 @@
                     prev: '上一页',
                     next: '下一页',
                     last: '尾页',
-                    //2.页码点击的回调函数事件
+                    //2.页码点击的回调函数事件  event点击的这个对象 和page点击的这个页码
                     onPageClick: function (event, page) {
-                        // 2.分页这块的调用
+                        // 把当前是第几页 赋值给 currenPage 给后面使用
+                        currenPage = page
+                        // 2.分页这块的调用   点击第几页 就显示第几页的数据
                         getData(page, null)
                     }
                 });
             });
 
-
             // 3. 点击筛选 调用
-
             $('#btnSearch').on('click', function (e) {
                 e.preventDefault()
+                // 每次筛选让  currenPage =1  显示在第一页
+                currenPage = 1
                 getData(1, function (backData) {
+                    // 从新渲染 分页页码          backData.data.totalPage 请求回来的这个 页数
                     $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, 1);
                 })
             })
 
+            // 删除按钮 要事件委托
+            $('tbody').on('click', '.delete', function () {
+                if (confirm('你确定要删除吗？')) {
+                    // 拿到点击删除的这个 的id
+                    let delId = $(this).attr('data-id')
+                    console.log(delId);
+                    // 发送ajax请求
+                    $.ajax({
+                        type: 'post',
+                        url: BigNew.article_delete,
+                        data: {
+                            id: delId
+                        },
+                        success: function (backData) {
+                            if (backData.code == 204) {
+                                getData(currenPage, function (backData) {
+                                    $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, currenPage);
+                                })
+                            }
+                        }
+                    })
+                }
+            })
 
-
-
-
+            // 在文章列表里面  点击  发表文章  跳转  然后给 ul 里面那个发表文章 选中 效果
+            $('#release_btn').on('click', function () {
+                parent.$('.level02>li').eq(1).click()
+            })
 
 
             //------------------------------------------------------------------------------

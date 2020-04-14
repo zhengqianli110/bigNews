@@ -67,6 +67,30 @@
             </form>
         </div>
     </div>
+    <script id="category-temp" type="text/html">
+        {{each data}}
+        <option value="{{$value.id}}">{{$value.name}}</option>
+        {{/each}}
+        </script>
+    <script src="./libs/http.js"></script>
+    <script>
+        $(function () {
+            // 进入到 文章发表页面   
+            // 1. 发送 ajax 请求 获取所有的 类别  显示在下拉列表里面
+            $.ajax({
+                type: 'get',
+                url: BigNew.category_list,
+                success: function (backData) {
+                    if (backData.code == 200) {
+                        // 模板引擎  核心方法
+                        let tem = template('category-temp', backData)
+                        // 添加到 下拉列表里面
+                        $('.category').html(tem)
+                    }
+                }
+            })
+        })
+    </script>
 </body>
 
 </html>
