@@ -14,6 +14,12 @@
     <script src="./libs/jquery-1.12.4.min.js"></script>
     <!-- 模板引擎 -->
     <script src="./libs/template-web.js"></script>
+    <!-- 导入时间插件的 css 和js 文件 -->
+    <link rel="stylesheet" href="./libs/jedate/css/jeDate-test.css">
+    <link rel="stylesheet" href="./libs/jedate/css/jedate.css">
+    <script src="./libs/jedate/js/jedate.js"></script>
+    <!-- wangEditor js导入 -->
+    <script src="./libs/wangEditor.js"></script>
 </head>
 
 <body>
@@ -50,12 +56,21 @@
                 </div>
                 <div class="form-group">
                     <label class="col-sm-2 control-label">发布时间：</label>
-                    <div class="col-sm-4">
+                    <!-- 日期插件  html结构 -->
+                    <div class="jeitem col-sm-4">
+                        <div class="jeinpbox">
+                            <input type="text" class="jeinput" id="testico" name="date" placeholder="YYYY-MM-DD">
+                            <div class="icons jebtns"
+                                onclick="jeDate('#testico',{trigger:false,format: 'YYYY-MM-DD', zIndex:20989,})">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="inputEmail3" class="col-sm-2 control-label">文章内容：</label>
-                    <div class="col-sm-10">
+                    <!-- 富文本 插件的 html 结构 -->
+                    <div id="editor" class="col-sm-10">
+                        <p>欢迎使用 <b>wangEditor</b> 富文本编辑器</p>
                     </div>
                 </div>
                 <div class="form-group">
@@ -67,16 +82,45 @@
             </form>
         </div>
     </div>
+    <!-- 下拉列表模板 -->
     <script id="category-temp" type="text/html">
+        <!-- <option value=""></option> -->
         {{each data}}
-        <option value="{{$value.id}}">{{$value.name}}</option>
-        {{/each}}
-        </script>
+    <option value="{{$value.id}}">{{$value.name}}</option>
+    {{/each}}
+    </script>
     <script src="./libs/http.js"></script>
     <script>
         $(function () {
-            // 进入到 文章发表页面   
-            // 1. 发送 ajax 请求 获取所有的 类别  显示在下拉列表里面
+            // 1.日期插件
+            jeDate('#testico', {
+                // 层级问题
+                zIndex: 20295,
+                //1:主题
+                // theme: { bgcolor: "#D91600", pnColor: "#FF6653" },
+                //2:trigger触发,不写的话默认值就是'click',就是默认触发
+                //trigger:false,
+                //3.日期格式
+                format: 'YYYY-MM-DD hh:mm:ss',
+                //4.//是否初始化时间，默认不初始化时间
+                isinitVal: true,
+                //5.//点击确定后的回调,obj包含{ elem当前输入框ID, val当前选择的值, date当前的日期值}                          
+                donefun: function (obj) {
+                    console.log(obj);
+                },
+            });
+            // 2.富文本插件
+            var E = window.wangEditor
+            var editor = new E('#editor')
+            // 或者 var editor = new E( document.getElementById('editor') )
+            editor.create()
+            // 3.头像选择框 选择图片 显示
+            $('#inputCover').on('change', function () {
+                let file1 = this.files[0]
+                let imgUrl = URL.createObjectURL(file1)
+                $('.article_cover').attr('src', imgUrl)
+            })
+            // 4.下拉列表
             $.ajax({
                 type: 'get',
                 url: BigNew.category_list,
@@ -88,6 +132,68 @@
                         $('.category').html(tem)
                     }
                 }
+            })
+            // 进入到 文章编辑页面
+            //  1.发送ajax请求 根据i获取 文章的信息 显示在页面
+            let id = window.location.search.split('=')[1]
+            // console.log(id);
+            setTimeout(function () {
+                $.ajax({
+                    type: 'get',
+                    url: BigNew.article_search,
+                    data: {
+                        id: id
+                    },
+                    success: function (backData) {
+                        if (backData.code == 200) {
+                            $('#inputTitle').val(backData.data.title) //标题
+                            $('#testico').val(backData.data.date) //文章发布时间
+                            $('.article_cover').attr('src', backData.data.cover)
+                            $('select.category').val(backData.data.categoryId)
+                            editor.txt.html(backData.data.content) //富文本框 内容
+                        }
+                    }
+                })
+            }, 10)
+            // 2.发送ajax请求 编辑文章 
+            // 点击修改发送请求  FormData 请求
+            $('.btn-edit').on('click', function (e) {
+                e.preventDefault()
+                let form2 = new FormData(document.querySelector('#form'))
+                form2.append('id', id)
+                form2.append('content', editor.txt.html())
+                form2.append('state', '已发布')
+                $.ajax({
+                    type: 'post',
+                    url: BigNew.article_edit,
+                    data: form2,
+                    contentType: false,
+                    processData: false,
+                    success: function (backData) {
+                        console.log(backData);
+                        window.location.href = './article_list.html'
+                    }
+                })
+            })
+            // 存为草稿点击事件 发送请求 跟 发布是一样的 只是 state 的属性值不同 不给默认是 草稿
+            $('.btn-draft').on('click', function (e) {
+                e.preventDefault()
+                let form2 = new FormData(document.querySelector('#form'))
+                form2.append('id', id)
+                form2.append('content', editor.txt.html())
+                // 默认不给的话 是草稿
+                // form2.append('state', '已发布')
+                $.ajax({
+                    type: 'post',
+                    url: BigNew.article_edit,
+                    data: form2,
+                    contentType: false,
+                    processData: false,
+                    success: function (backData) {
+                        console.log(backData);
+                        window.location.href = './article_list.html'
+                    }
+                })
             })
         })
     </script>
